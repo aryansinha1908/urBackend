@@ -262,6 +262,8 @@ module.exports.createCollection = async (req, res) => {
 
         await deleteProjectById(projectId);
         await setProjectById(projectId, project);
+        await deleteProjectByApiKeyCache(project.apiKey);
+        await deleteProjectByApiKeyCache(project.apiKey);
         // Safe Response
         const projectObj = project.toObject();
         delete projectObj.apiKey;
@@ -345,6 +347,7 @@ module.exports.getData = async (req, res) => {
 
 module.exports.insertData = async (req, res) => {
     try {
+        console.time("insert data")
         const { projectId, collectionName } = req.params;
         const project = await Project.findOne({ _id: projectId, owner: req.user._id });
         if (!project) return res.status(404).json({ error: "Project not found." });
@@ -377,6 +380,7 @@ module.exports.insertData = async (req, res) => {
             project.databaseUsed = (project.databaseUsed || 0) + docSize;
         }
         await project.save();
+        console.timeEnd("insert data")
 
         res.json(result);
     } catch (err) {

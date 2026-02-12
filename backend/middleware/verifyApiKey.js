@@ -7,7 +7,6 @@ const {
 
 module.exports = async (req, res, next) => {
     try {
-        console.time("api chk middleware")
         const apiKey = req.header('x-api-key');
         if (!apiKey) {
             return res.status(401).json({ error: 'API key not found' });
@@ -45,21 +44,26 @@ module.exports = async (req, res, next) => {
             await setProjectByApiKeyCache(hashedApi, project);
         }
 
+        console.time("checking if owner is verified")
         if (!project.owner.isVerified) {
             return res.status(401).json({
                 error: 'Owner not verified',
                 fix: 'Verify your account on https://urbackend.bitbros.in/dashboard'
             });
         }
+        console.timeEnd("checking if owner is verified")
 
         // Ensure defaults are present (crucial for lean objects or cached POJOs)
+        console.time("setting defaults")
         if (!project.resources) project.resources = {};
         if (!project.resources.db) project.resources.db = { isExternal: false };
         if (!project.resources.storage) project.resources.storage = { isExternal: false };
+        console.timeEnd("setting defaults")
 
+        console.time("setting project and hashed api key")
         req.project = project;
         req.hashedApiKey = hashedApi;
-        console.timeEnd("api chk middleware")
+        console.timeEnd("setting project and hashed api key")
         next();
     } catch (err) {
         res.status(500).json({ error: err.message });

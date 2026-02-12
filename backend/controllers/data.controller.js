@@ -10,6 +10,7 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 // INSERT DATA
 module.exports.insertData = async (req, res) => {
     try {
+        console.time("insert data")
         const { collectionName } = req.params;
         const project = req.project;
 
@@ -61,6 +62,7 @@ module.exports.insertData = async (req, res) => {
             );
         }
 
+        console.timeEnd("insert data")
         res.status(201).json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });

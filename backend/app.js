@@ -38,17 +38,23 @@ if (process.env.NODE_ENV === 'development') {
 
 const adminCorsOptions = {
     origin: function (origin, callback) {
-        console.time("cors for admin chk")
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin || adminWhitelist.indexOf(origin) !== -1) {
+        const start = process.hrtime.bigint();
+
+        const allowed = !origin || adminWhitelist.includes(origin);
+
+        const end = process.hrtime.bigint();
+        console.log("Pure CORS check time:",
+            Number(end - start) / 1e6, "ms");
+
+        if (allowed) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS for Admin access'));
         }
-        console.timeEnd("cors for admin chk")
     },
     credentials: true
 };
+
 
 if (process.env.NODE_ENV !== 'test') {
     GC.garbageCollect();

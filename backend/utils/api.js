@@ -15,11 +15,10 @@ function generateApiKey() {
 
 //api hashing
 function hashApiKey(apikey) {
-    // scrypt hashing: fast but brute focre resistant
-    const salt = process.env.API_KEY_SALT;
-
-    // derived key of 64 bytes
-    return crypto.scryptSync(apikey, salt, 64).toString('hex');
+    return crypto
+        .createHash("sha256")
+        .update(apikey)
+        .digest("hex");
 }
 
 module.exports = { generateApiKey, hashApiKey }

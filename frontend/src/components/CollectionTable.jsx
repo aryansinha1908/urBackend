@@ -302,16 +302,20 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
     const showSlider = scrollState.scrollWidth > scrollState.clientWidth;
 
     return (
-        <div className="table-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="table-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'visible' }}>
             {/* Toolbar Area */}
             <div className="table-toolbar glass-panel" style={{
+                overflow: 'visible',
+                position: 'relative',
+                zIndex: 50,
                 padding: '0.75rem 1.5rem',
                 borderBottom: '1px solid var(--color-border)',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 background: 'rgba(10, 10, 10, 0.4)',
                 backdropFilter: 'blur(10px)',
-                marginBottom: '1px'
+                marginBottom: '1px',
+                
             }}>
                 <div style={{ position: 'relative' }}>
                     <button
@@ -329,29 +333,27 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                         <Settings2 size={14} />
                         COLUMNS
                     </button>
-
-                    {showColumnMenu && (
+   {showColumnMenu && (
                         <>
                             <div
                                 className="fixed-backdrop"
-                                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                                style={{ position: 'fixed', inset: 0, zIndex: 10 }}
                                 onClick={() => setShowColumnMenu(false)}
                             />
-                            <div className="column-menu glass-panel" style={{
-                                position: 'absolute',
-                                right: 0,
-                                top: '100%',
-                                marginTop: '8px',
-                                width: '240px',
-                                maxHeight: '400px',
-                                overflowY: 'auto',
-                                zIndex: 50,
-                                padding: '8px',
-                                border: '1px solid var(--color-border)',
-                                boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                                borderRadius: '8px',
-                                background: '#0A0A0A'
-                            }}>
+                            <div
+  className="column-menu glass-panel"
+  style={{
+    position: 'absolute',
+    right: 0,
+    top: 'calc(100% + 6px)',
+    width: '220px',
+    maxHeight: '320px',
+    overflowY: 'auto',
+    zIndex: 100000,
+  }}
+>
+
+
                                 <div style={{
                                     fontSize: '0.7rem',
                                     fontWeight: 700,
@@ -405,6 +407,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             </div>
                         </>
                     )}
+                 
                 </div>
             </div>
 
@@ -437,7 +440,8 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                                                 position: (isStickyLeft || isStickyRight) ? "sticky" : "relative",
                                                 left: isStickyLeft ? 0 : 'auto',
                                                 right: isStickyRight ? 0 : 'auto',
-                                                zIndex: (isStickyLeft || isStickyRight) ? 20 : 10,
+                                               zIndex: (isStickyLeft || isStickyRight) ? 5 : 3,
+
                                                 background: 'rgba(10, 10, 10, 0.85)',
                                                 backdropFilter: 'blur(8px)',
                                                 boxShadow: isStickyRight ? '-5px 0 15px rgba(0,0,0,0.3)' : 'none'
@@ -479,7 +483,8 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                                             position: (isStickyLeft || isStickyRight) ? "sticky" : "relative",
                                             left: isStickyLeft ? 0 : 'auto',
                                             right: isStickyRight ? 0 : 'auto',
-                                            zIndex: (isStickyLeft || isStickyRight) ? 5 : 1,
+                                          zIndex: (isStickyLeft || isStickyRight) ? 2 : 1,
+
                                             boxShadow: isStickyRight ? '-5px 0 15px rgba(0,0,0,0.2)' : 'none'
                                         };
 

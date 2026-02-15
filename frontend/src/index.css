@@ -498,3 +498,20 @@ body {
   width: 5rem;
 
 }
+
+/* Fix dark-mode select dropdown options */
+select {
+  background-color: var(--color-bg-input);
+  color: #ffffff;
+}
+
+select option {
+  background-color: #0f0f0f;   
+  color: #ffffff;              
+}
+
+/* Optional: hover state */
+select option:hover {
+  background-color: #1f2933;
+}
+

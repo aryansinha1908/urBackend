@@ -75,6 +75,7 @@ const dataRoute = require('./routes/data');
 const userAuthRoute = require('./routes/userAuth');
 const storageRoute = require('./routes/storage');
 const schemaRoute = require('./routes/schemas');
+const releaseRoute = require('./routes/releases');
 
 // ROUTES SETUP 
 app.use('/api/auth/login', authLimiter);           // Strict limiter on login
@@ -85,6 +86,7 @@ app.use('/api/userAuth', limiter, logger, userAuthRoute);
 app.use('/api/data', limiter, cors(adminCorsOptions), logger, dataRoute);
 app.use('/api/schemas', limiter, cors(adminCorsOptions), logger, schemaRoute);
 app.use('/api/storage', limiter, cors(adminCorsOptions), logger, storageRoute);
+app.use('/api/releases', releaseRoute);
 
 app.get('/api/server-ip', async (req, res) => {
     const ip = await getPublicIp();

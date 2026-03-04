@@ -92,7 +92,6 @@ graph TB
     STORE_MGR -->|"isExternal: true"| SUPABASE_EXT
 
     API_MW -->|"Cache lookup"| REDIS_DB
-    REDIS_DB --> REDIS
 
     C_AUTH --> EMAIL
 ```

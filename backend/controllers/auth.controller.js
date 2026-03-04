@@ -18,7 +18,6 @@ const {
 const JWT_EXPIRES_IN = '7d';
 const OTP_MAX_ATTEMPTS = 5;
 
-// HELPER: Generate, hash, and store OTP
 async function createAndStoreOtp(userId) {
     const otp = crypto.randomInt(100000, 1000000).toString();
     

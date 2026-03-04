@@ -33,12 +33,23 @@
     transform: translateX(-50%);
     width: 800px;
     height: 800px;
-    background: radial-gradient(circle, rgba(62,207,142,0.12) 0%, rgba(64,158,255,0.08) 40%, transparent 70%);
+    background: radial-gradient(circle, rgba(62,207,142,0.1) 0%, rgba(64,158,255,0.06) 40%, transparent 70%);
     border-radius: 50%;
     filter: blur(100px);
     z-index: 0;
     pointer-events: none;
     animation: pulseGlow 10s ease-in-out infinite alternate;
+}
+
+.section-glow {
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(62,207,142,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(100px);
+    z-index: 0;
+    pointer-events: none;
 }
 
 @keyframes pulseGlow {

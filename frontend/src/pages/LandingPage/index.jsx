@@ -246,8 +246,9 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="how-it-works" style={{ padding: '6rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
+            <div id="how-it-works" style={{ padding: '6rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.08)', position: 'relative', overflow: 'hidden' }}>
+                <div className="section-glow" style={{ top: '-10%', right: '-10%', background: 'radial-gradient(circle, rgba(64,158,255,0.06) 0%, transparent 70%)' }}></div>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
                     <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                         <h2 className="section-title">Backend Architecture, Simplified.</h2>
                         <p className="section-desc">We handle the complex infrastructure so you can ship professional apps faster.</p>
@@ -282,8 +283,9 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="features" style={{ padding: '8rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
+            <div id="features" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
+                <div className="section-glow" style={{ bottom: '-10%', left: '-10%', background: 'radial-gradient(circle, rgba(62,207,142,0.06) 0%, transparent 70%)' }}></div>
+                <div style={{ textAlign: 'center', marginBottom: '5rem', position: 'relative', zIndex: 1 }}>
                     <h2 className="section-title">Complete Backend Suite</h2>
                     <p className="section-desc">Enterprise-grade tools packaged for individual developers.</p>
                 </div>
@@ -470,8 +472,9 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="faq" style={{ padding: '8rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem' }}>
+            <div id="faq" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
+                <div className="section-glow" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'radial-gradient(circle, rgba(64,158,255,0.04) 0%, transparent 70%)' }}></div>
+                <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
                         <h2 className="section-title">Common Questions</h2>
                     </div>

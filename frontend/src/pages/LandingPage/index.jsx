@@ -114,12 +114,8 @@ function LandingPage() {
 
             <nav className={`nav-glass ${!isNavVisible ? 'nav-hidden' : ''} ${scrolled ? 'nav-scrolled' : ''}`}>
                 <div className="nav-container">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 800, fontSize: '1.2rem', flex: 1 }}>
-                        <img src="/logo_u.png" alt="urBackend Logo" style={{ height: '32px', width: 'auto' }} />
-                        <span style={{ letterSpacing: '-0.5px' }}>
-                            <span style={{ color: '#facc15', border: '1px solid #facc15', borderRadius: '50%', padding: '0 4px', marginRight: '2px' }}>ur</span>
-                            Backend
-                        </span>
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <img src="/urBACKEND_NAV_LOGO (2).png" alt="urBackend Logo" style={{ height: '36px', width: 'auto' }} />
                     </div>
 
                     <div className="nav-links" style={{ display: window.innerWidth > 768 ? 'flex' : 'none', gap: '32px', alignItems: 'center', fontSize: '0.95rem', color: '#888', fontWeight: 500 }}>

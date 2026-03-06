@@ -141,7 +141,7 @@ async function sendAuthOtpEmail(email, { otp, type, pname }) {
     const safeDisplayName = rawPname.replace(/[\r\n]/g, '').trim();
     const finalDisplayName = /^[a-zA-Z0-9 ]+$/.test(safeDisplayName) 
         ? safeDisplayName 
-        : `"${safeDisplayName.replace(/"/g, '\\"')}"`;
+        : `"${safeDisplayName.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
     
     const isVerify = type === 'verification';
     const subject = isVerify ? "Verify your account" : "Reset your password";

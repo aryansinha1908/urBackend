@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const Project = require('../models/Project');
 const redis = require('../config/redis');
 const { authEmailQueue } = require('../queues/authEmailQueue');
-const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema } = require('../utils/input.validation');
+const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('../utils/input.validation');
 const { getConnection } = require('../utils/connection.manager');
 
 // FUNCTION - GET AUTH COLLECTION
@@ -56,7 +56,8 @@ module.exports.signup = async (req, res) => {
 
         const token = jwt.sign(
             { userId: result.insertedId, projectId: project._id },
-            project.jwtSecret
+            project.jwtSecret,
+            { expiresIn: '7d' }
         );
 
         res.status(201).json({
@@ -90,7 +91,8 @@ module.exports.login = async (req, res) => {
 
         const token = jwt.sign(
             { userId: user._id, projectId: project._id },
-            project.jwtSecret
+            project.jwtSecret,
+            { expiresIn: '7d' }
         );
 
         res.json({ token });
@@ -400,11 +402,13 @@ module.exports.updateAdminUser = async (req, res) => {
         delete updateData.password;
         delete updateData._id;
 
+        const sanitizedUpdateData = sanitize(updateData);
+
         const collection = await getAuthCollection(project);
 
         const result = await collection.updateOne(
             { _id: new mongoose.Types.ObjectId(userId) },
-            { $set: updateData }
+            { $set: sanitizedUpdateData }
         );
 
         if (result.matchedCount === 0) {

@@ -334,9 +334,9 @@ function CreateCollection() {
     const { token, user } = useAuth();
 
     const queryParams = new URLSearchParams(location.search);
-    const initialName = queryParams.get('name') || '';
+    const initialName = queryParams.get('name')?.trim().toLowerCase() || '';
 
-    const [name, setName] = useState(initialName);
+    const [name, setName] = useState(initialName === 'users' ? 'users' : initialName);
 
     // Default fields for a new collection
     // If it's a "users" collection, we provide the essential Auth fields
@@ -394,10 +394,15 @@ function CreateCollection() {
             return;
         }
 
-        if (!name) return toast.error("Collection name is required");
+        const normalizedName = name.trim().toLowerCase();
+        if (!normalizedName) return toast.error("Collection name is required");
+        if (initialName === 'users' && normalizedName !== 'users') {
+            return toast.error("The 'users' collection name cannot be changed.");
+        }
+
         if (fields.some(f => !f.key)) return toast.error("All fields must have a name");
 
-        if (name === 'users') {
+        if (normalizedName === 'users') {
             const hasEmail = fields.find(f => f.key === 'email' && f.type === 'String' && f.required);
             const hasPassword = fields.find(f => f.key === 'password' && f.type === 'String' && f.required);
             if (!hasEmail || !hasPassword) {
@@ -409,7 +414,7 @@ function CreateCollection() {
         try {
             await axios.post(`${API_URL}/api/projects/collection`, {
                 projectId,
-                collectionName: name,
+                collectionName: normalizedName,
                 schema: cleanFieldsForApi(fields)
             }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -444,9 +449,14 @@ function CreateCollection() {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        disabled={initialName === 'users'}
                         className="input-field"
+                        style={{
+                            cursor: initialName === 'users' ? 'not-allowed' : 'text',
+                            opacity: initialName === 'users' ? 0.7 : 1
+                        }}
                         placeholder="e.g. users, products, orders"
-                        autoFocus
+                        autoFocus={initialName !== 'users'}
                     />
                     <small style={{ color: 'var(--color-text-muted)', marginTop: '5px', display: 'block' }}>
                         This will be the name of your collection in the database.

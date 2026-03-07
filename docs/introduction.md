@@ -21,4 +21,4 @@ Traditional BaaS platforms lock you into their database and proprietary APIs. ur
 
 Traditional backend development is slow. You have to setup servers, configure databases, write boilerplate auth logic, and manage deployments. 
 
-urBackend provides a **Unified REST API** that abstract all that complexity away. You focus on your UI and user experience; we handle the pulse of your data.
+urBackend provides a **Unified REST API** that abstracts all that complexity away. You focus on your UI and user experience; we handle the pulse of your data.

@@ -20,7 +20,18 @@ const isProjectDbExternal = (project) => {
     return !!project.resources?.db?.isExternal;
 };
 
+
+/**
+ * Get the bucket name for the project
+ * @param {Object} project - The project object
+ * @returns {String}
+ */
+const getBucket = (project) =>
+    project.resources?.storage?.isExternal ? "files" : "dev-files";
+
+
 module.exports = {
     isProjectStorageExternal,
-    isProjectDbExternal
+    isProjectDbExternal,
+    getBucket
 };

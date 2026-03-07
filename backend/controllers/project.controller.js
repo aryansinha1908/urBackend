@@ -14,7 +14,7 @@ const { getCompiledModel } = require("../utils/injectModel")
 const QueryEngine = require("../utils/queryEngine");
 const { storageRegistry } = require("../utils/registry");
 const { deleteProjectByApiKeyCache, setProjectById, getProjectById, deleteProjectById } = require("../services/redisCaching");
-const { isProjectStorageExternal, isProjectDbExternal } = require("../utils/project.helpers");
+const { isProjectStorageExternal, isProjectDbExternal, getBucket } = require("../utils/project.helpers");
 const { v4: uuidv4 } = require('uuid');
 const { getPublicIp } = require("../utils/network");
 
@@ -596,7 +596,8 @@ module.exports.listFiles = async (req, res) => {
 
         res.json(files);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(err);
+        res.status(500).json({ error: "Something Went Wrong", try: "Try checking docs or contact support - urbackend@bitbros.in" });
     }
 };
 

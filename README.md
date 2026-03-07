@@ -1,14 +1,18 @@
+# urBackend 🚀
+
 <p align="center">
   <img src="banner.png" alt="urBackend Banner" width="100%" />
 </p>
+
 <p align="center">
-  <b>The Instant "Backend-as-a-Service" for Frontend Developers.</b><br/>
-  Get a managed NoSQL database, JWT Auth, and Cloud Storage in 60 seconds.
+  <b>Bring your own MongoDB. Get a production-ready backend in 60 seconds.</b><br/>
+  <i>your backend — your database — your rules.</i>
 </p>
 
 <p align="center">
   <a href="https://urbackend.bitbros.in"><strong>Dashboard</strong></a> ·
-  <a href="API_USAGE.md"><strong>Docs</strong></a> ·
+  <a href="docs/introduction.md"><strong>Docs</strong></a> ·
+  <a href="docs/getting-started.md"><strong>Quick Start</strong></a> ·
   <a href="https://discord.gg/CXJjvJkNWn"><strong>Discord</strong></a>
 </p>
 
@@ -27,12 +31,14 @@ urBackend is an **Open-Source BaaS** built to eliminate the complexity of backen
 
 ## 🟢 Powerful Features
 
-- `>_` **Instant NoSQL Database**: Create collections and push JSON data instantly.
-- `>_` **Managed Authentication**: Sign Up, Login, and Profile management with JWT.
-- `>_` **Cloud Storage**: Managed file/image uploads with public CDN links.
-- `>_` **Bring Your Own Database**: Connect your own MongoDB or Supabase instance.
-- `>_` **Real-time Analytics**: Monitor traffic and resource usage from a premium dashboard.
-- `>_` **Secure Architecture**: Dual-key separation (`pk_live` & `sk_live`) for total safety.
+| Feature | Description |
+| :--- | :--- |
+| **Instant NoSQL** | Create collections and push JSON data instantly with zero boilerplate. |
+| **Managed Auth** | Sign Up, Login, and Profile management with JWT built-in. |
+| **Cloud Storage** | Managed file/image uploads with public CDN links. |
+| **BYO Database** | Connect your own MongoDB Atlas or self-hosted instance. |
+| **Real-time Analytics** | Monitor traffic and resource usage from a premium dashboard. |
+| **Secure Architecture** | Dual-key separation (`pk_live` & `sk_live`) for total safety. |
 
 ---
 
@@ -53,21 +59,25 @@ const res = await fetch('https://api.urbackend.bitbros.in/api/data/products', {
 
 ---
 
-## 🛠️ Infrastructure
+## 🏗️ How it Works (The Visual Flow)
 
-<div align="center">
-
-| **Core System** | **Developer UI** | **Data Layer** |
-| :--- | :--- | :--- |
-| Node.js & Express | React.js (Vite) | MongoDB (Mongoose) |
-| JWT Authentication | Lucide React | Redis & BullMQ |
-| Storage Manager | Recharts | Supabase (BYOD) |
-
-</div>
+```mermaid
+graph LR
+    A[1. Connect MongoDB] --> B[2. Define Collections]
+    B --> C[3. 🚀 Instant REST APIs]
+    C --> D[4. Scale & Monitor]
+```
 
 ---
 
+## 🏗️ Architecture
+
+Explore our [Architecture Diagram](ARCHITECTURE_DIAGRAM.md) to understand the system design, core components, and data flow in detail.
+
+---
 ## 🤝 Community
+
+Join hundreds of developers building faster without the backend headaches.
 
 - [GitHub Issues](https://github.com/yash-pouranik/urbackend/issues): Report bugs & request features.
 - [Discord Channel](https://discord.gg/CXJjvJkNWn): Join the conversation.

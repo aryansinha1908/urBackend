@@ -1,13 +1,12 @@
 const { getStorage } = require("../utils/storage.manager");
 const { randomUUID } = require("crypto");
+const Project = require("../models/Project");
+const { isProjectStorageExternal } = require("../utils/project.helpers");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const getBucket = (project) =>
-    project.resources?.storage?.isExternal ? "files" : "dev-files";
-
-const isExternal = (project) =>
-    !!project.resources?.storage?.isExternal;
+    isProjectStorageExternal(project) ? "files" : "dev-files";
 
 /**
  * Upload File
@@ -24,14 +23,21 @@ module.exports.uploadFile = async (req, res) => {
         }
 
         const project = req.project;
-        const external = isExternal(project);
+        const external = isProjectStorageExternal(project);
         const bucket = getBucket(project);
 
+        // ATOMIC QUOTA RESERVATION
         if (!external) {
-            if (project.storageUsed + file.size > project.storageLimit) {
-                return res
-                    .status(403)
-                    .json({ error: "Internal storage limit exceeded." });
+            const result = await Project.updateOne(
+                { 
+                    _id: project._id, 
+                    $expr: { $lte: [{ $add: ["$storageUsed", file.size] }, "$storageLimit"] }
+                },
+                { $inc: { storageUsed: file.size } }
+            );
+
+            if (result.matchedCount === 0) {
+                return res.status(403).json({ error: "Internal storage limit exceeded." });
             }
         }
 
@@ -47,11 +53,15 @@ module.exports.uploadFile = async (req, res) => {
                 upsert: false
             });
 
-        if (uploadError) throw uploadError;
-
-        if (!external) {
-            project.storageUsed += file.size;
-            await project.save();
+        if (uploadError) {
+            // ROLLBACK QUOTA
+            if (!external) {
+                await Project.updateOne(
+                    { _id: project._id },
+                    { $inc: { storageUsed: -file.size } }
+                );
+            }
+            throw uploadError;
         }
 
         const { data: publicUrlData } = supabase.storage
@@ -86,7 +96,7 @@ module.exports.deleteFile = async (req, res) => {
         }
 
         const project = req.project;
-        const external = isExternal(project);
+        const external = isProjectStorageExternal(project);
         const bucket = getBucket(project);
 
         if (!path.startsWith(`${project._id}/`)) {
@@ -117,11 +127,10 @@ module.exports.deleteFile = async (req, res) => {
         if (deleteError) throw deleteError;
 
         if (!external && fileSize > 0) {
-            project.storageUsed = Math.max(
-                0,
-                project.storageUsed - fileSize
+            await Project.updateOne(
+                { _id: project._id },
+                { $inc: { storageUsed: -fileSize } }
             );
-            await project.save();
         }
 
         return res.json({ message: "File deleted successfully" });
@@ -173,15 +182,17 @@ module.exports.deleteAllFiles = async (req, res) => {
         }
 
         // Reset usage only for internal storage
-        if (!isExternalStorage(project)) {
-            project.storageUsed = 0;
-            await project.save();
+        if (!isProjectStorageExternal(project)) {
+            await Project.updateOne(
+                { _id: project._id },
+                { $set: { storageUsed: 0 } }
+            );
         }
 
         res.json({
             success: true,
             deleted: deletedCount,
-            provider: isExternalStorage(project) ? "external" : "internal"
+            provider: isProjectStorageExternal(project) ? "external" : "internal"
         });
 
     } catch (err) {

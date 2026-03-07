@@ -27,8 +27,7 @@ function Sidebar({ logo, isOpen, onClose }) { // Props received
                     </Link>
                 ) : (
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <img src={logo} alt="Logo" style={{ height: '24px' }} />
-                        <span className="sidebar-logo-text">urBackend</span>
+                        <img src={logo} alt="urBackend Logo" style={{ height: '32px', width: 'auto' }} />
                     </div>
                 )}
 

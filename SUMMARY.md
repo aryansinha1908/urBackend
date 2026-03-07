@@ -11,7 +11,7 @@
 * [Security & Keys 🛡️](docs/security.md)
 
 ---
-### Project & Community 🤝
+## Project & Community 🤝
 * [Architecture Diagram](ARCHITECTURE_DIAGRAM.md)
 * [Contributing](CONTRIBUTING.md)
 * [Code of Conduct](CODE_OF_CONDUCT.md)

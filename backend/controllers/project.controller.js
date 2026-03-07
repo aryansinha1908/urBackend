@@ -14,6 +14,7 @@ const { getCompiledModel } = require("../utils/injectModel")
 const QueryEngine = require("../utils/queryEngine");
 const { storageRegistry } = require("../utils/registry");
 const { deleteProjectByApiKeyCache, setProjectById, getProjectById, deleteProjectById } = require("../services/redisCaching");
+const { isProjectStorageExternal, isProjectDbExternal } = require("../utils/project.helpers");
 const { v4: uuidv4 } = require('uuid');
 const { getPublicIp } = require("../utils/network");
 
@@ -26,11 +27,6 @@ const validateUsersSchema = (schema) => {
 
 
 
-const getBucket = (project) =>
-    project.resources?.storage?.isExternal ? "files" : "dev-files";
-
-const isExternalStorage = (project) =>
-    !!project.resources?.storage?.isExternal;
 
 
 
@@ -616,7 +612,7 @@ module.exports.uploadFile = async (req, res) => {
             .select("+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit");
         if (!project) return res.status(404).json({ error: "Project not found" });
 
-        const external = isExternalStorage(project);
+        const external = isProjectStorageExternal(project);
 
         if (!external) {
             if (project.storageUsed + file.size > project.storageLimit) {
@@ -668,7 +664,7 @@ module.exports.deleteFile = async (req, res) => {
 
         const supabase = await getStorage(project);
         const bucket = getBucket(project);
-        const external = isExternalStorage(project);
+        const external = isProjectStorageExternal(project);
 
         let fileSize = 0;
 
@@ -729,7 +725,7 @@ module.exports.deleteAllFiles = async (req, res) => {
             }
         }
 
-        if (!isExternalStorage(project)) {
+        if (!isProjectStorageExternal(project)) {
             project.storageUsed = 0;
             await project.save();
         }
@@ -822,7 +818,7 @@ module.exports.deleteProject = async (req, res) => {
         }
 
         // DELETE: Only for internal Infraa
-        if (!isExternalStorage(project)) {
+        if (!isProjectStorageExternal(project)) {
             const supabase = await getStorage(project);
             const bucket = getBucket(project);
 
@@ -901,7 +897,14 @@ module.exports.toggleAuth = async (req, res) => {
 
         if (enable) {
             const usersCol = project.collections.find(c => c.name === 'users');
-            if (usersCol && !validateUsersSchema(usersCol.model)) {
+            if (!usersCol) {
+                return res.status(422).json({
+                    error: "Users Collection Missing",
+                    message: "The 'users' collection must be created and configured with required 'email' and 'password' fields before enabling Authentication."
+                });
+            }
+
+            if (!validateUsersSchema(usersCol.model)) {
                 return res.status(422).json({ 
                     error: "Invalid Users Schema",
                     message: "The 'users' collection must have required 'email' and 'password' string fields. Please fix the schema before enabling Auth." 

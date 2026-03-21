@@ -1,5 +1,5 @@
 {
-  "name": "user-server",
+  "name": "dashboard-api",
   "version": "0.2.0",
   "private": true,
   "main": "src/app.js",

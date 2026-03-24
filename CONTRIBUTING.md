@@ -15,71 +15,81 @@ cd urBackend
 ```
 
 ### 2. Project Structure
-The repository is organized into two main directories:
-- **`backend/`**: Node.js & Express application handling the API, database, and authentication.
-- **`frontend/`**: React.js (Vite) application for the user dashboard.
+The repository is organized into a monorepo-style structure:
+
+#### Applications (`apps/`)
+-   **`apps/dashboard-api`**: The internal API handling dashboard operations, project management, and user authentication for the urBackend platform.
+-   **`apps/public-api`**: The public-facing API that users' applications interact with to store data, manage users, and handle storage.
+-   **`apps/web-dashboard`**: The React-based frontend dashboard where users manage their projects and keys.
+
+#### Packages (`packages/`)
+-   **`packages/common`**: Shared logic, MongoDB models, and utility functions used by both APIs.
+
+#### Examples (`examples/`)
+-   **`examples/social-demo`**: A full-featured X.com clone demonstrating the capabilities of urBackend.
 
 ### 3. Setup and Installation
 
-#### Backend
-1. Navigate to the backend directory: `cd backend`
-2. Install dependencies: `npm install`
-3. Create a `.env` file (refer to `README.md` for required variables).
-4. Start the server:
-   ```bash
-   npm start
-   ```
+#### Prerequisites
+-   **Node.js**: v18 or later.
+-   **MongoDB**: A running instance (local or Atlas).
+-   **Redis**: Required for API key caching in `public-api`.
 
-#### Frontend
-1. Navigate to the frontend directory: `cd frontend`
-2. Install dependencies: `npm install`
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+#### Installation
+1.  From the root directory, install all dependencies for the entire monorepo:
+    ```bash
+    npm install
+    ```
+    This will automatically link all packages and install dependencies for all apps.
+
+#### Running Locally
+
+You can start all main applications at once (useful for testing end-to-end):
+```bash
+npm run dev
+```
+
+If you only want to work on a specific application:
+-   **Dashboard API**: `npm run dev --workspace=dashboard-api`
+-   **Public API**: `npm run dev --workspace=public-api`
+-   **Web Dashboard**: `npm run dev --workspace=web-dashboard`
 
 ## 🛠️ Development Workflow
 
-1. **Create a Branch**: Always create a new branch for your work. Use descriptive names like `feature/new-login-ui` or `fix/database-connection`.
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+1.  **Create a Branch**: Always create a new branch for your work. Use descriptive names like `feature/new-login-ui` or `fix/database-connection`.
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
 
-2. **Make Changes**: Implement your feature or fix. 
+2.  **Make Changes**: Implement your feature or fix. Follow the existing coding style and ensure your code is well-documented.
 
-3. **Test Your Changes**:
-   - **Backend**: Run tests using Jest.
-     ```bash
-     cd backend
-     npm test
-     ```
-   - **Frontend**: Ensure there are no linting errors.
-     ```bash
-     cd frontend
-     npm run lint
-     ```
+3.  **Test Your Changes**:
+    -   Ensure there are no linting errors across the project:
+      ```bash
+      npm run lint --workspaces --if-present
+      ```
 
-4. **Commit**: Use clear and concise commit messages.
-   ```bash
-   git commit -m "Add feature X"
-   ```
+4.  **Commit**: Use clear and concise commit messages following conventional commits standard if possible.
+    ```bash
+    git commit -m "feat: add social auth support"
+    ```
 
-5. **Push**: Push your branch to your forked repository.
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+5.  **Push**: Push your branch to your forked repository.
+    ```bash
+    git push origin feature/your-feature-name
+    ```
 
 ## 📬 Submitting a Pull Request (PR)
 
-1. Go to the original repository and click "Compare & pull request".
-2. Provide a clear title and description of your changes.
-3. Link any related issues (e.g., "Fixes #123").
-4. Wait for review and address any feedback.
+1.  Go to the original repository and click "Compare & pull request".
+2.  Provide a clear title and description of your changes.
+3.  Link any related issues (e.g., "Fixes #123").
+4.  Wait for review and address any feedback.
 
 ## 🐛 Reporting Bugs & Feature Requests
 
-- **Bugs**: If you find a bug, please create an issue describing the problem, steps to reproduce, and expected behavior.
-- **Features**: If you have an idea for a new feature, feel free to open an issue to discuss it before starting implementation.
+-   **Bugs**: If you find a bug, please create an issue describing the problem, steps to reproduce, and expected behavior.
+-   **Features**: If you have an idea for a new feature, feel free to open an issue to discuss it before starting implementation.
 
 ## 🤝 Code of Conduct
 

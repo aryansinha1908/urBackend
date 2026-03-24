@@ -70,10 +70,15 @@ Add these extra fields to the `users` schema:
 {
   "authorId": { "type": "String", "required": true },
   "authorUsername": { "type": "String", "required": true },
+  "authorDisplayName": { "type": "String" },
+  "authorAvatar": { "type": "String" },
+  "authorVerified": { "type": "Boolean", "default": false },
   "content": { "type": "String", "required": true },
   "images": { "type": "Array", "default": [] },
   "likesCount": { "type": "Number", "default": 0 },
-  "commentsCount": { "type": "Number", "default": 0 }
+  "commentsCount": { "type": "Number", "default": 0 },
+  "retweetsCount": { "type": "Number", "default": 0 },
+  "createdAt": { "type": "Date", "default": "Date.now" }
 }
 ```
 
@@ -131,12 +136,27 @@ To protect your **Secret Key**, this app uses a hybrid architecture:
 
 ## 📊 Detailed Schema Reference
 
+### `comments`
+```json
+{
+  "postId": { "type": "String", "required": true },
+  "authorId": { "type": "String", "required": true },
+  "authorUsername": { "type": "String", "required": true },
+  "authorDisplayName": { "type": "String" },
+  "authorAvatar": { "type": "String" },
+  "content": { "type": "String", "required": true },
+  "likesCount": { "type": "Number", "default": 0 },
+  "createdAt": { "type": "Date", "default": "Date.now" }
+}
+```
+
 ### `likes`
 ```json
 {
   "userId": { "type": "String", "required": true },
   "targetId": { "type": "String", "required": true },
-  "targetType": { "type": "String", "enum": ["post", "comment"] }
+  "targetType": { "type": "String", "enum": ["post", "comment"] },
+  "createdAt": { "type": "Date", "default": "Date.now" }
 }
 ```
 
@@ -144,7 +164,8 @@ To protect your **Secret Key**, this app uses a hybrid architecture:
 ```json
 {
   "followerId": { "type": "String", "required": true },
-  "followingId": { "type": "String", "required": true }
+  "followingId": { "type": "String", "required": true },
+  "createdAt": { "type": "Date", "default": "Date.now" }
 }
 ```
 

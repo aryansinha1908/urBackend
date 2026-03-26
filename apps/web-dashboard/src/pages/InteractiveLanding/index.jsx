@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Zap, Check, Database, Code, Terminal, Plus } from 'lucide-react';
 import './style.css';
 
@@ -32,14 +32,18 @@ function InteractiveLanding() {
         timersRef.current = [];
     };
 
-    const runDemo = () => {
+    const runDemo = useCallback(() => {
         clearAllTimers();
-        setCollectionName('');
-        setFields([]);
-        setIsBuildingUi(true);
-        setShowDeploying(false);
-        setShowEndpoints(false);
-        setActiveEndpoints([]);
+        
+        // Wrap initial state updates in setTimeout to avoid synchronous setState inside useEffect
+        setTimeout(() => {
+            setCollectionName('');
+            setFields([]);
+            setIsBuildingUi(true);
+            setShowDeploying(false);
+            setShowEndpoints(false);
+            setActiveEndpoints([]);
+        }, 0);
 
         timersRef.current.push(setTimeout(() => setCollectionName('users'), 600));
         timersRef.current.push(setTimeout(() => setFields([CLICK_STEPS[0]]), 1200));
@@ -61,12 +65,12 @@ function InteractiveLanding() {
                 timersRef.current.push(t);
             });
         }, 4600));
-    };
+    }, []);
 
     useEffect(() => {
         runDemo();
         return () => clearAllTimers();
-    }, []);
+    }, [runDemo]);
 
     const resetAnimation = () => {
         runDemo();
@@ -96,7 +100,7 @@ function InteractiveLanding() {
 
             {/* Hero Section */}
             <div className="hero-container">
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
@@ -112,10 +116,10 @@ function InteractiveLanding() {
                     <p className="hero-description">
                         Build collections from UI clicks just like urBackend studio, then instantly get production-ready REST APIs with auth and CRUD.
                     </p>
-                </motion.div>
+                </Motion.div>
 
                 {/* Interactive Demo Window */}
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.3 }}
@@ -158,7 +162,7 @@ function InteractiveLanding() {
 
                                 <div className="builder-table">
                                     {fields.map((field, index) => (
-                                        <motion.div
+                                        <Motion.div
                                             key={field.name}
                                             className="builder-row"
                                             initial={{ opacity: 0, x: -12 }}
@@ -170,7 +174,7 @@ function InteractiveLanding() {
                                             <span className={`builder-req ${field.required ? 'on' : 'off'}`}>
                                                 {field.required ? <Check size={12} /> : '—'}
                                             </span>
-                                        </motion.div>
+                                        </Motion.div>
                                     ))}
                                 </div>
 
@@ -187,7 +191,7 @@ function InteractiveLanding() {
                         {/* Middle: Animated Flow */}
                         <div className="flow-middle">
                             <div className="flow-line">
-                                <motion.div
+                                <Motion.div
                                     className="flow-pulse"
                                     animate={{
                                         x: showDeploying ? [0, 100] : 0,
@@ -202,7 +206,7 @@ function InteractiveLanding() {
                             </div>
                             <AnimatePresence>
                                 {showDeploying && (
-                                    <motion.div
+                                    <Motion.div
                                         className="deploying-badge"
                                         initial={{ scale: 0, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
@@ -210,7 +214,7 @@ function InteractiveLanding() {
                                     >
                                         <Zap size={12} />
                                         <span>Deploying...</span>
-                                    </motion.div>
+                                    </Motion.div>
                                 )}
                             </AnimatePresence>
                             <div className="flow-icon">
@@ -228,7 +232,7 @@ function InteractiveLanding() {
                             <div className="endpoints-container">
                                         {showEndpoints ? (
                                     ENDPOINTS.map((endpoint, index) => (
-                                        <motion.div
+                                        <Motion.div
                                             key={index}
                                             className={`endpoint-item ${activeEndpoints.includes(index) ? 'active' : ''}`}
                                             initial={{ opacity: 0, x: 20 }}
@@ -243,7 +247,7 @@ function InteractiveLanding() {
                                                 <Check size={12} />
                                                 {endpoint.status}
                                             </span>
-                                        </motion.div>
+                                        </Motion.div>
                                     ))
                                 ) : (
                                     <div className="empty-state">
@@ -254,10 +258,10 @@ function InteractiveLanding() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </Motion.div>
 
                 {/* Trust Indicators */}
-                <motion.div
+                <Motion.div
                     className="trust-indicators"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -279,10 +283,10 @@ function InteractiveLanding() {
                         <Check size={16} />
                         <span>Open Source</span>
                     </div>
-                </motion.div>
+                </Motion.div>
 
                 {/* CTA Buttons */}
-                <motion.div
+                <Motion.div
                     className="cta-group"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -295,7 +299,7 @@ function InteractiveLanding() {
                     <Link to="/docs" className="cta-secondary">
                         View Documentation
                     </Link>
-                </motion.div>
+                </Motion.div>
             </div>
         </div>
     );

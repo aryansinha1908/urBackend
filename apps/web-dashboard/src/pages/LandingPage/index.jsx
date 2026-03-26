@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -99,14 +99,18 @@ function LandingPage() {
         heroTimersRef.current = [];
     };
 
-    const runHeroDemo = () => {
+    const runHeroDemo = useCallback(() => {
         clearHeroTimers();
-        setCollectionName('');
-        setHeroFields([]);
-        setIsBuildingUi(true);
-        setShowDeploying(false);
-        setShowEndpoints(false);
-        setActiveEndpoints([]);
+
+        // Wrap initial state updates in setTimeout to avoid synchronous setState inside useEffect
+        setTimeout(() => {
+            setCollectionName('');
+            setHeroFields([]);
+            setIsBuildingUi(true);
+            setShowDeploying(false);
+            setShowEndpoints(false);
+            setActiveEndpoints([]);
+        }, 0);
 
         heroTimersRef.current.push(setTimeout(() => setCollectionName('users'), 400));
         heroTimersRef.current.push(setTimeout(() => setHeroFields([HERO_CLICK_STEPS[0]]), 900));
@@ -124,12 +128,12 @@ function LandingPage() {
                 heroTimersRef.current.push(timer);
             });
         }, 3600));
-    };
+    }, []);
 
     useEffect(() => {
         runHeroDemo();
         return () => clearHeroTimers();
-    }, []);
+    }, [runHeroDemo]);
 
     const toggleFaq = (index) => {
         setOpenFaqIndex(openFaqIndex === index ? null : index);

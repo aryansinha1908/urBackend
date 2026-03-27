@@ -9,6 +9,47 @@ const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEm
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
 
+const hasRequiredField = (usersColConfig, fieldKey) => {
+    const model = usersColConfig?.model || [];
+    return model.some((f) => f?.key === fieldKey && !!f?.required);
+};
+
+const getVerificationField = (usersColConfig) => {
+    const modelKeys = (usersColConfig?.model || []).map((f) => f?.key);
+    if (modelKeys.includes('emailVerified')) return 'emailVerified';
+    if (modelKeys.includes('isVerified')) return 'isVerified';
+    if (modelKeys.includes('isverified')) return 'isverified';
+    return 'emailVerified';
+};
+
+const buildAuthUserPayload = (usersColConfig, parsedData, hashedPassword, verifiedValue) => {
+    const { email, password: _password, username, ...otherData } = parsedData;
+
+    const payload = {
+        email,
+        password: hashedPassword,
+        ...otherData,
+        createdAt: new Date()
+    };
+
+    if (username !== undefined) {
+        payload.username = username;
+    }
+
+    const verificationField = getVerificationField(usersColConfig);
+    payload[verificationField] = verifiedValue;
+
+    if (hasRequiredField(usersColConfig, 'name') && (payload.name === undefined || payload.name === null || payload.name === '')) {
+        payload.name = username || email.split('@')[0];
+    }
+
+    if (hasRequiredField(usersColConfig, 'username') && (payload.username === undefined || payload.username === null || payload.username === '')) {
+        payload.username = payload.name || email.split('@')[0];
+    }
+
+    return payload;
+};
+
 
 // POST REQ FOR SIGNUP
 module.exports.signup = async (req, res) => {
@@ -34,14 +75,12 @@ module.exports.signup = async (req, res) => {
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const newUserPayload = {
-            username,
-            email,
-            password: hashedPassword,
-            emailVerified: false,
-            ...otherData,
-            createdAt: new Date()
-        };
+        const newUserPayload = buildAuthUserPayload(
+            usersColConfig,
+            { email, password, username, ...otherData },
+            hashedPassword,
+            false
+        );
 
         // Model.create handles validation and default values
         const result = await Model.create(newUserPayload);
@@ -167,14 +206,12 @@ module.exports.createAdminUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUserPayload = {
-            username,
-            email,
-            password: hashedPassword,
-            emailVerified: true,
-            ...otherData,
-            createdAt: new Date()
-        };
+        const newUserPayload = buildAuthUserPayload(
+            usersColConfig,
+            { email, password, username, ...otherData },
+            hashedPassword,
+            true
+        );
 
         const result = await Model.create(newUserPayload);
 
@@ -248,9 +285,10 @@ module.exports.verifyEmail = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
+        const verificationField = getVerificationField(usersColConfig);
         const result = await Model.updateOne(
             { email },
-            { $set: { emailVerified: true } }
+            { $set: { [verificationField]: true } }
         );
 
         if (result.matchedCount === 0) return res.status(404).json({ error: "User not found" });

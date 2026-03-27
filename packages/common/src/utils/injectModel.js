@@ -2,121 +2,198 @@ const modelRegistry = new WeakMap();
 const mongoose = require("mongoose");
 
 const typeMapping = {
-    String: String,
-    Number: Number,
-    Boolean: Boolean,
-    Date: Date
+  String: String,
+  Number: Number,
+  Boolean: Boolean,
+  Date: Date,
 };
+
+const UNIQUE_SUPPORTED_TYPES = new Set(["String", "Number", "Boolean", "Date"]);
 
 // Recursive field definition builder
 function buildFieldDef(field) {
-    // Object type — nested sub-schema
-    if (field.type === 'Object' && field.fields && field.fields.length > 0) {
-        const subSchema = {};
-        field.fields.forEach(f => {
-            subSchema[f.key] = buildFieldDef(f);
-        });
-        return { type: subSchema, required: !!field.required };
-    }
+  // Object type — nested sub-schema
+  if (field.type === "Object" && field.fields && field.fields.length > 0) {
+    const subSchema = {};
+    field.fields.forEach((f) => {
+      subSchema[f.key] = buildFieldDef(f);
+    });
+    return { type: subSchema, required: !!field.required };
+  }
 
-    // Array type
-    if (field.type === 'Array') {
-        if (!field.items) {
-            return { type: [mongoose.Schema.Types.Mixed], required: !!field.required };
-        }
-        // Array of Objects
-        if (field.items.type === 'Object' && field.items.fields && field.items.fields.length > 0) {
-            const subSchema = {};
-            field.items.fields.forEach(f => {
-                subSchema[f.key] = buildFieldDef(f);
-            });
-            return { type: [subSchema], required: !!field.required };
-        }
-        // Array of Ref
-        if (field.items.type === 'Ref') {
-            return {
-                type: [{ type: mongoose.Schema.Types.ObjectId }],
-                required: !!field.required
-            };
-        }
-        // Array of primitives
-        const itemType = typeMapping[field.items.type] || mongoose.Schema.Types.Mixed;
-        return { type: [itemType], required: !!field.required };
+  // Array type
+  if (field.type === "Array") {
+    if (!field.items) {
+      return {
+        type: [mongoose.Schema.Types.Mixed],
+        required: !!field.required,
+      };
     }
-
-    // Ref type — stores ObjectId
-    if (field.type === 'Ref') {
-        return {
-            type: mongoose.Schema.Types.ObjectId,
-            required: !!field.required
-        };
+    // Array of Objects
+    if (
+      field.items.type === "Object" &&
+      field.items.fields &&
+      field.items.fields.length > 0
+    ) {
+      const subSchema = {};
+      field.items.fields.forEach((f) => {
+        subSchema[f.key] = buildFieldDef(f);
+      });
+      return { type: [subSchema], required: !!field.required };
     }
+    // Array of Ref
+    if (field.items.type === "Ref") {
+      return {
+        type: [{ type: mongoose.Schema.Types.ObjectId }],
+        required: !!field.required,
+      };
+    }
+    // Array of primitives
+    const itemType =
+      typeMapping[field.items.type] || mongoose.Schema.Types.Mixed;
+    return { type: [itemType], required: !!field.required };
+  }
 
-    // Primitive types
+  // Ref type — stores ObjectId
+  if (field.type === "Ref") {
     return {
-        type: typeMapping[field.type],
-        required: !!field.required
+      type: mongoose.Schema.Types.ObjectId,
+      required: !!field.required,
     };
+  }
+
+  // Primitive types
+  return {
+    type: typeMapping[field.type],
+    required: !!field.required,
+  };
 }
 
 function buildMongooseSchema(fieldsArray) {
-    const schemaDef = {};
-    fieldsArray.forEach(field => {
-        schemaDef[field.key] = buildFieldDef(field);
-    });
-    return new mongoose.Schema(schemaDef, { timestamps: true, strict: false });
+  const schemaDef = {};
+  fieldsArray.forEach((field) => {
+    schemaDef[field.key] = buildFieldDef(field);
+  });
+  return new mongoose.Schema(schemaDef, { timestamps: true, strict: false });
 }
 
-
 function getCompiledModel(connection, collectionData, projectId, isExternal) {
+  let collectionName = "";
 
-    let collectionName = "";
+  if (!isExternal) {
+    collectionName = `${projectId}_${collectionData.name}`;
+  } else {
+    collectionName = collectionData.name;
+  }
 
-    if (!isExternal) {
-        collectionName = `${projectId}_${collectionData.name}`
-    } else {
-        collectionName = collectionData.name;
+  // Get per-connection cache
+  if (!modelRegistry.has(connection)) {
+    modelRegistry.set(connection, new Map());
+  }
 
-    }
+  const connectionModels = modelRegistry.get(connection);
 
+  // If already compiled for THIS connection
+  if (connectionModels.has(collectionName)) {
+    return connectionModels.get(collectionName);
+  }
 
-    // Get per-connection cache
-    if (!modelRegistry.has(connection)) {
-        modelRegistry.set(connection, new Map());
-    }
+  // If model already exists on connection (edge case)
+  if (connection.models[collectionName]) {
+    const existingModel = connection.models[collectionName];
+    connectionModels.set(collectionName, existingModel);
+    return existingModel;
+  }
 
-    const connectionModels = modelRegistry.get(connection);
+  // Build schema + compile
+  const schema = buildMongooseSchema(collectionData.model);
+  const model = connection.model(collectionName, schema);
 
-    // If already compiled for THIS connection
-    if (connectionModels.has(collectionName)) {
-        return connectionModels.get(collectionName);
-    }
+  // Cache it
+  connectionModels.set(collectionName, model);
 
-    // If model already exists on connection (edge case)
-    if (connection.models[collectionName]) {
-        const existingModel = connection.models[collectionName];
-        connectionModels.set(collectionName, existingModel);
-        return existingModel;
-    }
-
-    // Build schema + compile
-    const schema = buildMongooseSchema(collectionData.model);
-    const model = connection.model(collectionName, schema);
-
-    // Cache it
-    connectionModels.set(collectionName, model);
-
-    return model;
+  return model;
 }
 
 // Clear cached model (needed when schema changes)
 function clearCompiledModel(connection, collectionName) {
-    if (modelRegistry.has(connection)) {
-        modelRegistry.get(connection).delete(collectionName);
-    }
-    if (connection.models[collectionName]) {
-        delete connection.models[collectionName];
-    }
+  if (modelRegistry.has(connection)) {
+    modelRegistry.get(connection).delete(collectionName);
+  }
+  if (connection.models[collectionName]) {
+    delete connection.models[collectionName];
+  }
 }
 
-module.exports = { getCompiledModel, clearCompiledModel };
+async function findDuplicates(Model, fieldKey) {
+  return Model.aggregate([
+    {
+      $match: {
+        [fieldKey]: { $exists: true, $ne: null },
+      },
+    },
+    {
+      $group: {
+        _id: `$${fieldKey}`,
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $match: {
+        count: { $gt: 1 },
+      },
+    },
+  ]);
+}
+
+async function createUniqueIndexes(Model, fields = []) {
+  const createdIndexes = [];
+
+  try {
+    for (const field of fields) {
+      if (!field.unique) continue;
+      if (!UNIQUE_SUPPORTED_TYPES.has(field.type)) continue;
+
+      const duplicates = await findDuplicates(Model, field.key);
+
+      if (duplicates.length > 0) {
+        const examples = duplicates
+          .slice(0, 3)
+          .map((d) => JSON.stringify(d._id))
+          .join(", ");
+
+        throw new Error(
+          `Cannot create unique index on '${field.key}'. ${duplicates.length} duplicate values exist.${examples ? ` Examples: ${examples}` : ""}`,
+        );
+      }
+
+      const indexName = `${field.key}_1`;
+
+      await Model.collection.createIndex(
+        { [field.key]: 1 },
+        {
+          unique: true,
+          sparse: !field.required,
+          name: indexName,
+        },
+      );
+
+      createdIndexes.push(indexName);
+    }
+  } catch (error) {
+    for (const indexName of createdIndexes) {
+      try {
+        await Model.collection.dropIndex(indexName);
+      } catch (_) {
+        // ignore rollback drop errors
+      }
+    }
+    throw error;
+  }
+}
+
+module.exports = {
+  getCompiledModel,
+  clearCompiledModel,
+  createUniqueIndexes,
+};

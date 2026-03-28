@@ -42,11 +42,14 @@ const buildAuthUserPayload = (usersColConfig, parsedData, hashedPassword, verifi
     }
 
     if (hasRequiredField(usersColConfig, 'name') && (payload.name === undefined || payload.name === null || payload.name === '')) {
-        payload.name = username || email.split('@')[0];
+        const generatedName = username || email.split('@')[0];
+        payload.name = generatedName.length >= 3 ? generatedName : generatedName.padEnd(3, '0');
     }
 
     if (hasRequiredField(usersColConfig, 'username') && (payload.username === undefined || payload.username === null || payload.username === '')) {
-        payload.username = payload.name || email.split('@')[0];
+        const baseUsername = typeof payload.name === 'string' ? payload.name : email.split('@')[0];
+        const generatedUsername = baseUsername;
+        payload.username = generatedUsername.length >= 3 ? generatedUsername : generatedUsername.padEnd(3, '0');
     }
 
     return payload;

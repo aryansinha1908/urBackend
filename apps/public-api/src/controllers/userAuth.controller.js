@@ -47,7 +47,8 @@ const buildAuthUserPayload = (usersColConfig, parsedData, hashedPassword, verifi
     }
 
     if (hasRequiredField(usersColConfig, 'username') && (payload.username === undefined || payload.username === null || payload.username === '')) {
-        const generatedUsername = payload.name || email.split('@')[0];
+        const baseUsername = typeof payload.name === 'string' ? payload.name : email.split('@')[0];
+        const generatedUsername = baseUsername;
         payload.username = generatedUsername.length >= 3 ? generatedUsername : generatedUsername.padEnd(3, '0');
     }
 

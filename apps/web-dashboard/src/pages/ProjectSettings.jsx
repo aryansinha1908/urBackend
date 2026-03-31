@@ -627,8 +627,8 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
          return toast.error("S3 keys, region, and bucket are required");
       }
     } else if (config.storageProvider === "cloudflare_r2") {
-      if (!config.s3AccessKeyId || !config.s3SecretAccessKey || !config.s3Endpoint || !config.s3Bucket) {
-         return toast.error("R2 keys, endpoint, and bucket are required");
+      if (!config.s3AccessKeyId || !config.s3SecretAccessKey || !config.s3Endpoint || !config.s3Bucket || !config.publicUrlHost) {
+         return toast.error("R2 keys, endpoint, bucket, and publicUrlHost are required");
       }
     }
 

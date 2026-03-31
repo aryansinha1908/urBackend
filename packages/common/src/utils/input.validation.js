@@ -165,7 +165,7 @@ module.exports.updateExternalConfigSchema = z.object({
         if (!data.s3AccessKeyId || !data.s3SecretAccessKey || !data.s3Region || !data.s3Bucket) return false;
     }
     if (data.storageProvider === 'cloudflare_r2') {
-        if (!data.s3AccessKeyId || !data.s3SecretAccessKey || !data.s3Endpoint || !data.s3Bucket) return false;
+        if (!data.s3AccessKeyId || !data.s3SecretAccessKey || !data.s3Endpoint || !data.s3Bucket || !data.publicUrlHost) return false;
     }
     
     // VALIDATION - REQUIRE DB URI OR STORAGE CONFIG

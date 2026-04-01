@@ -19,7 +19,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
 });
 
 const { url, path } = await res.json();
-// url: "https://storage.urbackend.bitbros.in/.../image.jpg"
+// url: "https://storage.ub.bitbros.in/.../image.jpg"
 // path: "project_id/image.jpg"
 ```
 
@@ -27,7 +27,7 @@ Expected response shape:
 
 ```json
 {
-  "url": "https://storage.urbackend.bitbros.in/PROJECT_ID/file.png",
+  "url": "https://storage.ub.bitbros.in/PROJECT_ID/file.png",
   "path": "PROJECT_ID/file.png"
 }
 ```

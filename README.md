@@ -53,13 +53,13 @@ Go from zero to a live backend in **under 60 seconds**.
 
 ```javascript
 // Read data with a publishable key — safe to use in frontend code
-const res = await fetch('https://api.urbackend.bitbros.in/api/data/products', {
+const res = await fetch('https://api.ub.bitbros.in/api/data/products', {
   headers: { 'x-api-key': 'pk_live_...' }
 });
 const { data } = await res.json();
 
 // Write data with a secret key — server-side only
-const writeRes = await fetch('https://api.urbackend.bitbros.in/api/data/products', {
+const writeRes = await fetch('https://api.ub.bitbros.in/api/data/products', {
   method: 'POST',
   headers: {
     'x-api-key': 'sk_live_...',
@@ -105,7 +105,7 @@ RLS lets you safely allow frontend clients to write data without exposing your s
 
 ```javascript
 // 1. User logs in to get their JWT
-const loginRes = await fetch('https://api.urbackend.bitbros.in/api/userAuth/login', {
+const loginRes = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
   method: 'POST',
   headers: { 'x-api-key': 'pk_live_...', 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'user@example.com', password: 'secret' })
@@ -113,7 +113,7 @@ const loginRes = await fetch('https://api.urbackend.bitbros.in/api/userAuth/logi
 const { token } = await loginRes.json();
 
 // 2. User creates a post — userId is auto-injected if omitted
-const postRes = await fetch('https://api.urbackend.bitbros.in/api/data/posts', {
+const postRes = await fetch('https://api.ub.bitbros.in/api/data/posts', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_...',

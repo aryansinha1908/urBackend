@@ -282,37 +282,76 @@ module.exports.updateExternalConfigSchema = z
       z.string().url("Invalid Storage URL format").optional(),
     ),
     storageKey: emptyToUndefined,
-    storageProvider: z.enum(["supabase", "aws", "cloudinary"]).optional(),
+    storageProvider: z.enum(["supabase", "s3", "cloudflare_r2"]).optional(),
+
+    // SCHEMA - AWS S3 / CLOUDFLARE R2 FIELDS
+    s3AccessKeyId: emptyToUndefined,
+    s3SecretAccessKey: emptyToUndefined,
+    s3Region: emptyToUndefined,
+    s3Endpoint: z.preprocess(
+      (val) => (val === "" || val === null ? undefined : val),
+      z.string().url("Invalid Endpoint URL format").optional(),
+    ),
+    s3Bucket: emptyToUndefined,
+    publicUrlHost: emptyToUndefined,
   })
   .refine(
     (data) => {
-      if (data.storageUrl && !data.storageKey) return false;
-      if (data.storageKey && !data.storageUrl) return false;
-      return !!(data.dbUri || (data.storageUrl && data.storageKey));
+      if (data.storageProvider === "supabase") {
+        if (!data.storageUrl || !data.storageKey) return false;
+      }
+
+      if (data.storageProvider === "s3") {
+        if (
+          !data.s3AccessKeyId ||
+          !data.s3SecretAccessKey ||
+          !data.s3Region ||
+          !data.s3Bucket
+        ) {
+          return false;
+        }
+      }
+
+      if (data.storageProvider === "cloudflare_r2") {
+        if (
+          !data.s3AccessKeyId ||
+          !data.s3SecretAccessKey ||
+          !data.s3Endpoint ||
+          !data.s3Bucket ||
+          !data.publicUrlHost
+        ) {
+          return false;
+        }
+      }
+
+      // VALIDATION - REQUIRE DB URI OR STORAGE CONFIG
+      return !!(
+        data.dbUri ||
+        data.storageProvider ||
+        (data.storageUrl && data.storageKey)
+      );
     },
     {
       message:
-        "Provide either a DB URI or a complete Storage config (URL + Key).",
+        "Provide either a DB URI or a complete Storage config for the selected provider.",
     },
   );
 
-module.exports.userSignupSchema = z
-  .object({
-    username: z
-      .string()
-      .min(3, { message: "Username must be at least 3 characters." })
-      .max(50, { message: "Username must be between 3 and 50 characters." })
-      .optional(),
+module.exports.userSignupSchema = z.object({
+  username: z
+    .string()
+    .min(3, { message: "Username must be at least 3 characters." })
+    .max(50, { message: "Username must be between 3 and 50 characters." })
+    .optional(),
 
-    email: z
-      .string()
-      .min(1, { message: "Email is required." })
-      .email({ message: "Invalid email format." })
-      .max(100, { message: "Email is too long." }),
+  email: z
+    .string()
+    .min(1, { message: "Email is required." })
+    .email({ message: "Invalid email format." })
+    .max(100, { message: "Email is too long." }),
 
-    password: z
-      .string()
-      .min(6, { message: "Password must be at least 6 characters." })
-      .max(100, { message: "Password is too long." }),
-  })
-  .passthrough();
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." })
+    .max(100, { message: "Password is too long." }),
+});

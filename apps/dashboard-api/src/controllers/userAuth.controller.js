@@ -8,6 +8,56 @@ const { authEmailQueue } = require('@urbackend/common');
 const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
+const { getUserActiveSessions, getRefreshSession, revokeSessionChain } = require('@urbackend/common');
+
+const hasRequiredField = (usersColConfig, fieldKey) => {
+    const model = usersColConfig?.model || [];
+    return model.some((f) => f?.key === fieldKey && !!f?.required);
+};
+
+const getVerificationField = (usersColConfig) => {
+    const modelKeys = (usersColConfig?.model || []).map((f) => f?.key);
+    if (modelKeys.includes('emailVerified')) return 'emailVerified';
+    if (modelKeys.includes('isVerified')) return 'isVerified';
+    if (modelKeys.includes('isverified')) return 'isverified';
+    return null;
+};
+
+const buildAuthUserPayload = (usersColConfig, parsedData, hashedPassword, verifiedValue) => {
+    const { email, password: _password, username, ...otherData } = parsedData;
+
+    const payload = {
+        email,
+        password: hashedPassword,
+        ...otherData,
+        createdAt: new Date()
+    };
+
+    if (username !== undefined) {
+        payload.username = username;
+    }
+
+    const verificationField = getVerificationField(usersColConfig);
+    if (verificationField !== null) {
+        payload[verificationField] = verifiedValue;
+    }
+
+    if (hasRequiredField(usersColConfig, 'name') && (payload.name === undefined || payload.name === null || payload.name === '')) {
+        const generatedName = username || email.split('@')[0];
+        payload.name = generatedName.length >= 3 ? generatedName : generatedName.padEnd(3, '0');
+    }
+
+    if (hasRequiredField(usersColConfig, 'username') && (payload.username === undefined || payload.username === null || payload.username === '')) {
+        const generatedUsernameBase =
+            typeof payload.name === 'string' && payload.name !== ''
+                ? payload.name
+                : email.split('@')[0];
+        const generatedUsername = String(generatedUsernameBase);
+        payload.username = generatedUsername.length >= 3 ? generatedUsername : generatedUsername.padEnd(3, '0');
+    }
+
+    return payload;
+};
 
 
 // POST REQ FOR SIGNUP
@@ -34,14 +84,12 @@ module.exports.signup = async (req, res) => {
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const newUserPayload = {
-            username,
-            email,
-            password: hashedPassword,
-            emailVerified: false,
-            ...otherData,
-            createdAt: new Date()
-        };
+        const newUserPayload = buildAuthUserPayload(
+            usersColConfig,
+            { email, password, username, ...otherData },
+            hashedPassword,
+            false
+        );
 
         // Model.create handles validation and default values
         const result = await Model.create(newUserPayload);
@@ -167,14 +215,12 @@ module.exports.createAdminUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUserPayload = {
-            username,
-            email,
-            password: hashedPassword,
-            emailVerified: true,
-            ...otherData,
-            createdAt: new Date()
-        };
+        const newUserPayload = buildAuthUserPayload(
+            usersColConfig,
+            { email, password, username, ...otherData },
+            hashedPassword,
+            true
+        );
 
         const result = await Model.create(newUserPayload);
 
@@ -248,9 +294,13 @@ module.exports.verifyEmail = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
+        const verificationField = getVerificationField(usersColConfig);
+        if (!verificationField) {
+            return res.status(500).json({ error: "No verification field found in users schema" });
+        }
         const result = await Model.updateOne(
             { email },
-            { $set: { emailVerified: true } }
+            { $set: { [verificationField]: true } }
         );
 
         if (result.matchedCount === 0) return res.status(404).json({ error: "User not found" });
@@ -462,6 +512,57 @@ module.exports.updateAdminUser = async (req, res) => {
         }
 
         res.json({ message: "User updated successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// GET ACTIVE SESSIONS FOR A USER (Admin)
+module.exports.listUserSessions = async (req, res) => {
+    try {
+        const project = req.project;
+        const { userId } = req.params;
+
+        // Verify the userId actually exists in this project's users collection
+        const usersColConfig = project.collections.find(c => c.name === 'users');
+        if (usersColConfig) {
+            const connection = await getConnection(project._id);
+            const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+            const userExists = await Model.findOne(
+                { _id: new mongoose.Types.ObjectId(userId) },
+                { _id: 1 }
+            ).lean();
+            if (!userExists) {
+                return res.status(404).json({ error: 'User not found in this project' });
+            }
+        }
+
+        const sessions = await getUserActiveSessions(project._id, userId);
+        res.json({ sessions });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// REVOKE A SPECIFIC SESSION FOR A USER (Admin)
+module.exports.revokeUserSession = async (req, res) => {
+    try {
+        const projectId = String(req.project._id);
+        const { userId, tokenId } = req.params;
+
+        // Fetch the session to verify it really belongs to this project AND this user
+        const session = await getRefreshSession(tokenId);
+
+        if (!session
+            || String(session.projectId) !== projectId
+            || String(session.userId) !== String(userId)) {
+            return res.status(404).json({ error: 'Session not found or does not belong to this user' });
+        }
+
+        // Revoke the entire chain starting from this token, cleaning up the user sessions set
+        await revokeSessionChain(tokenId);
+
+        res.json({ message: 'Session revoked successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

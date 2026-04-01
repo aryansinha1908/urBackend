@@ -18,9 +18,20 @@ const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
   body: formData
 });
 
-const { url, path } = await res.json();
-// url: "https://storage.urbackend.bitbros.in/.../image.jpg"
+const { url, path, provider } = await res.json();
+// url: "https://xyz.supabase.co/storage/v1/object/public/dev-files/project_id/image.jpg"
 // path: "project_id/image.jpg"
+```
+
+Expected response shape:
+
+```json
+{
+  "message": "File uploaded successfully",
+  "url": "https://xyz.supabase.co/storage/v1/object/public/dev-files/PROJECT_ID/file.png",
+  "path": "PROJECT_ID/file.png",
+  "provider": "internal"
+}
 ```
 
 > [!NOTE]
@@ -42,8 +53,16 @@ await fetch('https://api.ub.bitbros.in/api/storage/file', {
 });
 ```
 
+If `path` is invalid or already removed, API returns `404`.
+
 ## Limits
 
 - **File Size**: Maximum **10 MB** per file.
 - **Storage Quota**: Total storage depends on your project's plan (default: **100 MB**).
 - **Public Access**: All uploaded files are publicly accessible via the returned URL. Do not upload sensitive, private documents.
+
+## Troubleshooting
+
+- `400 Bad Request`: usually missing `file` in multipart form.
+- `401 Unauthorized`: missing/invalid API key.
+- `413 Payload Too Large`: file exceeds max size limit.

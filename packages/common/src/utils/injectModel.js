@@ -71,7 +71,12 @@ function buildFieldDef(field) {
 function buildMongooseSchema(fieldsArray) {
   const schemaDef = {};
   fieldsArray.forEach((field) => {
-    schemaDef[field.key] = buildFieldDef(field);
+    const normalizeKey = (key) =>
+      String(key || "")
+        .replace(/\uFEFF/g, "")
+        .trim();
+    if (!normalizedKey) return;
+    schemaDef[normalizedKey] = buildFieldDef(field);
   });
   return new mongoose.Schema(schemaDef, { timestamps: true, strict: false });
 }

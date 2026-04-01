@@ -69,6 +69,7 @@ const { registry, storageRegistry } = require("./utils/registry");
 const { getStorage } = require("./utils/storage.manager");
 const validateEnv = require("./utils/validateEnv");
 const { validateData, validateUpdateData } = require("./utils/validateData");
+const sessionManager = require("./utils/session.manager");
 
 module.exports = {
   connectDB,
@@ -126,4 +127,5 @@ module.exports = {
   validateData,
   validateUpdateData,
   userSignupSchema,
+  ...sessionManager,
 };

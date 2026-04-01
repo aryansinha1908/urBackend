@@ -2,12 +2,104 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const mongoose = require('mongoose');
-const Project = require('@urbackend/common');
 const {redis} = require('@urbackend/common');
+const {Project} = require('@urbackend/common');
 const { authEmailQueue } = require('@urbackend/common');
+const { getRefreshSession, persistRefreshSession, revokeSessionChain } = require('@urbackend/common');
 const { loginSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
+const {
+    assertRefreshRateLimits,
+    clearRefreshCookie,
+    hashRefreshToken,
+    issueAuthTokens,
+    parseRefreshToken,
+    readRefreshTokenFromRequest,
+    shouldExposeRefreshToken
+} = require('../utils/refreshToken');
+
+const getUsersModel = async (project) => {
+    const usersColConfig = project.collections.find(c => c.name === 'users');
+    if (!usersColConfig) return { usersColConfig: null, Model: null };
+    const connection = await getConnection(project._id);
+    const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+    return { usersColConfig, Model };
+};
+
+const hasRequiredField = (usersColConfig, fieldKey) => {
+    const model = usersColConfig?.model || [];
+    return model.some((f) => f?.key === fieldKey && !!f?.required);
+};
+
+const getVerificationField = (usersColConfig) => {
+    const modelKeys = (usersColConfig?.model || []).map((f) => f?.key);
+    if (modelKeys.includes('emailVerified')) return 'emailVerified';
+    if (modelKeys.includes('isVerified')) return 'isVerified';
+    if (modelKeys.includes('isverified')) return 'isverified';
+    return null;
+};
+
+const buildAuthUserPayload = (usersColConfig, parsedData, hashedPassword, verifiedValue) => {
+    const { email, password: _password, username, ...otherData } = parsedData;
+
+    const payload = {
+        email,
+        password: hashedPassword,
+        ...otherData,
+        createdAt: new Date()
+    };
+
+    if (username !== undefined) {
+        payload.username = username;
+    }
+
+    const verificationField = getVerificationField(usersColConfig);
+    if (verificationField !== null) {
+        payload[verificationField] = verifiedValue;
+    }
+
+    if (hasRequiredField(usersColConfig, 'name') && (payload.name === undefined || payload.name === null || payload.name === '')) {
+        const generatedName = username || email.split('@')[0];
+        payload.name = generatedName.length >= 3 ? generatedName : generatedName.padEnd(3, '0');
+    }
+
+    if (hasRequiredField(usersColConfig, 'username') && (payload.username === undefined || payload.username === null || payload.username === '')) {
+        const baseUsername = typeof payload.name === 'string' ? payload.name : email.split('@')[0];
+        const generatedUsername = baseUsername;
+        payload.username = generatedUsername.length >= 3 ? generatedUsername : generatedUsername.padEnd(3, '0');
+    }
+
+    return payload;
+};
+
+const SENSITIVE_PROFILE_KEYS = [
+    'password',
+    'email',
+    'token',
+    'otp',
+    'secret',
+    'session',
+    'refresh'
+];
+
+const sanitizePublicProfile = (userDoc, usersColConfig) => {
+    const result = { _id: userDoc._id };
+    const schemaKeys = (usersColConfig?.model || []).map((f) => f?.key).filter(Boolean);
+
+    for (const key of schemaKeys) {
+        const lowered = String(key).toLowerCase();
+        const isSensitive = SENSITIVE_PROFILE_KEYS.some((needle) => lowered.includes(needle));
+        if (isSensitive) continue;
+        if (userDoc[key] !== undefined) {
+            result[key] = userDoc[key];
+        }
+    }
+
+    if (userDoc.createdAt) result.createdAt = userDoc.createdAt;
+    if (userDoc.updatedAt) result.updatedAt = userDoc.updatedAt;
+    return result;
+};
 
 
 // POST REQ FOR SIGNUP
@@ -34,14 +126,12 @@ module.exports.signup = async (req, res) => {
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const newUserPayload = {
-            username,
-            email,
-            password: hashedPassword,
-            emailVerified: false,
-            ...otherData,
-            createdAt: new Date()
-        };
+        const newUserPayload = buildAuthUserPayload(
+            usersColConfig,
+            { email, password, username, ...otherData },
+            hashedPassword,
+            false
+        );
 
         // Model.create handles validation and default values
         const result = await Model.create(newUserPayload);
@@ -55,15 +145,19 @@ module.exports.signup = async (req, res) => {
             pname: project.name
         });
 
-        const token = jwt.sign(
-            { userId: result._id, projectId: project._id },
-            project.jwtSecret,
-            { expiresIn: '7d' }
-        );
+        const issuedTokens = await issueAuthTokens({
+            project,
+            userId: result._id,
+            req,
+            res
+        });
 
         res.status(201).json({
             message: "User registered successfully. Please verify your email.",
-            token: token,
+            token: issuedTokens.accessToken,
+            accessToken: issuedTokens.accessToken,
+            expiresIn: issuedTokens.expiresIn,
+            ...(shouldExposeRefreshToken(req) ? { refreshToken: issuedTokens.refreshToken } : {}),
             userId: result._id
         });
 
@@ -94,13 +188,19 @@ module.exports.login = async (req, res) => {
         const validPass = await bcrypt.compare(password, user.password);
         if (!validPass) return res.status(400).json({ error: "Invalid email or password" });
 
-        const token = jwt.sign(
-            { userId: user._id, projectId: project._id },
-            project.jwtSecret,
-            { expiresIn: '7d' }
-        );
+        const issuedTokens = await issueAuthTokens({
+            project,
+            userId: user._id,
+            req,
+            res
+        });
 
-        res.json({ token });
+        res.json({
+            token: issuedTokens.accessToken,
+            accessToken: issuedTokens.accessToken,
+            expiresIn: issuedTokens.expiresIn,
+            ...(shouldExposeRefreshToken(req) ? { refreshToken: issuedTokens.refreshToken } : {})
+        });
 
     } catch (err) {
         if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
@@ -144,6 +244,31 @@ module.exports.me = async (req, res) => {
     }
 }
 
+// GET PUBLIC PROFILE BY USERNAME
+module.exports.publicProfile = async (req, res) => {
+    try {
+        const project = req.project;
+        const username = String(req.params.username || '').trim();
+        if (!username) return res.status(400).json({ error: "Username is required" });
+
+        const { usersColConfig, Model } = await getUsersModel(project);
+        if (!usersColConfig || !Model) return res.status(404).json({ error: "Auth collection not found" });
+
+        const hasUsernameField = (usersColConfig.model || []).some((f) => String(f?.key || '').trim() === 'username');
+        if (!hasUsernameField) {
+            return res.status(400).json({ error: "Public profile requires a 'username' field in users schema" });
+        }
+
+        const user = await Model.findOne({ username }, { password: 0 }).lean();
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const profile = sanitizePublicProfile(user, usersColConfig);
+        return res.json(profile);
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+}
+
 // POST REQ FOR ADMIN CREATE USER
 module.exports.createAdminUser = async (req, res) => {
     try {
@@ -167,14 +292,12 @@ module.exports.createAdminUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUserPayload = {
-            username,
-            email,
-            password: hashedPassword,
-            emailVerified: true,
-            ...otherData,
-            createdAt: new Date()
-        };
+        const newUserPayload = buildAuthUserPayload(
+            usersColConfig,
+            { email, password, username, ...otherData },
+            hashedPassword,
+            true
+        );
 
         const result = await Model.create(newUserPayload);
 
@@ -248,9 +371,13 @@ module.exports.verifyEmail = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
+        const verificationField = getVerificationField(usersColConfig);
+        if (!verificationField) {
+            return res.status(500).json({ error: "No verification field found in users schema" });
+        }
         const result = await Model.updateOne(
             { email },
-            { $set: { emailVerified: true } }
+            { $set: { [verificationField]: true } }
         );
 
         if (result.matchedCount === 0) return res.status(404).json({ error: "User not found" });
@@ -309,7 +436,8 @@ module.exports.resetPasswordUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        const collection = await getAuthCollection(project);
+        const { Model: collection } = await getUsersModel(project);
+        if (!collection) return res.status(404).json({ error: "Auth collection not found" });
 
         const result = await collection.updateOne(
             { email },
@@ -419,6 +547,139 @@ module.exports.changePasswordUser = async (req, res) => {
     } catch (err) {
         if (err instanceof z.ZodError) return res.status(400).json({ error: err.issues?.[0]?.message || "Validation failed" });
         res.status(500).json({ error: err.message });
+    }
+};
+
+module.exports.refreshToken = async (req, res) => {
+    try {
+        const rawRefreshToken = readRefreshTokenFromRequest(req);
+        if (!rawRefreshToken) {
+            clearRefreshCookie(res);
+            return res.status(401).json({ error: 'Refresh token missing' });
+        }
+
+        const parsedToken = parseRefreshToken(rawRefreshToken);
+        if (!parsedToken) {
+            clearRefreshCookie(res);
+            return res.status(401).json({ error: 'Invalid refresh token format' });
+        }
+
+        const earlyRateLimit = await assertRefreshRateLimits({ req, tokenId: parsedToken.tokenId });
+        if (earlyRateLimit.limited) {
+            clearRefreshCookie(res);
+            return res.status(429).json({ error: earlyRateLimit.message });
+        }
+
+        const session = await getRefreshSession(parsedToken.tokenId);
+        if (!session) {
+            clearRefreshCookie(res);
+            return res.status(401).json({ error: 'Refresh session not found' });
+        }
+
+        if (String(req.project._id) !== String(session.projectId)) {
+            return res.status(403).json({ error: 'Refresh token does not belong to this project' });
+        }
+
+        const rateResult = await assertRefreshRateLimits({ req, tokenId: session.tokenId, userId: session.userId });
+        if (rateResult.limited) {
+            clearRefreshCookie(res);
+            return res.status(429).json({ error: rateResult.message });
+        }
+
+        const now = Date.now();
+        const isExpired = new Date(session.expiresAt).getTime() <= now;
+        if (session.revokedAt || session.isUsed || isExpired) {
+            await revokeSessionChain(session.tokenId);
+            clearRefreshCookie(res);
+            return res.status(403).json({ error: 'Refresh token is invalid or already used' });
+        }
+
+        if (hashRefreshToken(rawRefreshToken) !== session.tokenHash) {
+            await revokeSessionChain(session.tokenId);
+            clearRefreshCookie(res);
+            return res.status(403).json({ error: 'Refresh token mismatch' });
+        }
+
+        session.isUsed = true;
+        session.lastUsedAt = new Date().toISOString();
+        await persistRefreshSession(session);
+
+        const project = await Project.findById(session.projectId)
+            .select('name resources collections jwtSecret isAuthEnabled')
+            .lean();
+
+        if (!project || !project.isAuthEnabled) {
+            await revokeSessionChain(session.tokenId);
+            clearRefreshCookie(res);
+            return res.status(401).json({ error: 'Project auth is unavailable' });
+        }
+
+        const { Model } = await getUsersModel(project);
+        if (!Model) {
+            await revokeSessionChain(session.tokenId);
+            clearRefreshCookie(res);
+            return res.status(404).json({ error: 'Auth collection not found' });
+        }
+
+        const user = await Model.findOne(
+            { _id: new mongoose.Types.ObjectId(session.userId) },
+            { _id: 1 }
+        ).lean();
+        if (!user) {
+            await revokeSessionChain(session.tokenId);
+            clearRefreshCookie(res);
+            return res.status(401).json({ error: 'User not found for refresh token' });
+        }
+
+        const newTokens = await issueAuthTokens({
+            project,
+            userId: user._id,
+            req,
+            res,
+            rotatedFrom: session.tokenId
+        });
+
+        session.rotatedTo = newTokens.tokenId;
+        session.lastUsedAt = new Date().toISOString();
+        await persistRefreshSession(session);
+
+        const usedHeaderToken = !!req.header('x-refresh-token');
+        return res.status(200).json({
+            token: newTokens.accessToken,
+            accessToken: newTokens.accessToken,
+            expiresIn: newTokens.expiresIn,
+            ...(usedHeaderToken ? { refreshToken: newTokens.refreshToken } : {})
+        });
+    } catch (err) {
+        clearRefreshCookie(res);
+        return res.status(500).json({ error: err.message });
+    }
+};
+
+module.exports.logout = async (req, res) => {
+    try {
+        const rawRefreshToken = readRefreshTokenFromRequest(req);
+        if (rawRefreshToken) {
+            const parsedToken = parseRefreshToken(rawRefreshToken);
+            if (parsedToken) {
+                const session = await getRefreshSession(parsedToken.tokenId);
+                if (session && hashRefreshToken(rawRefreshToken) === session.tokenHash) {
+                    if (String(req.project._id) !== String(session.projectId)) {
+                        return res.status(403).json({ error: 'Refresh token does not belong to this project' });
+                    }
+                    session.revokedAt = new Date().toISOString();
+                    session.isUsed = true;
+                    session.lastUsedAt = new Date().toISOString();
+                    await persistRefreshSession(session);
+                }
+            }
+        }
+
+        clearRefreshCookie(res);
+        return res.status(200).json({ success: true, message: 'Logged out successfully' });
+    } catch (err) {
+        clearRefreshCookie(res);
+        return res.status(500).json({ error: err.message });
     }
 };
 

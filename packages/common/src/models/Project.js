@@ -24,12 +24,23 @@ const fieldSchema = new mongoose.Schema({
   // For type: 'Array' — describes each array item { type, fields? }
   items: { type: mongoose.Schema.Types.Mixed },
 });
+
 // For type: 'Object' — recursive sub-fields
 fieldSchema.add({ fields: [fieldSchema] });
 
 const collectionSchema = new mongoose.Schema({
   name: { type: String, required: true },
   model: [fieldSchema],
+  rls: {
+    enabled: { type: Boolean, default: false },
+    mode: {
+      type: String,
+      enum: ["owner-write-only"],
+      default: "owner-write-only",
+    },
+    ownerField: { type: String, default: "userId" },
+    requireAuthForWrite: { type: Boolean, default: true },
+  },
 });
 
 const projectSchema = new mongoose.Schema(
@@ -64,11 +75,11 @@ const projectSchema = new mongoose.Schema(
 
     // STORAGE LIMITS (Files)
     storageUsed: { type: Number, default: 0 },
-    storageLimit: { type: Number, default: 20 * 1024 * 1024 }, // 20MB default
+    storageLimit: { type: Number, default: 20 * 1024 * 1024 },
 
     // DATABASE LIMITS (JSON Docs)
     databaseUsed: { type: Number, default: 0 },
-    databaseLimit: { type: Number, default: 20 * 1024 * 1024 }, // 20MB default
+    databaseLimit: { type: Number, default: 20 * 1024 * 1024 },
 
     // Granular Resources Structure
     resources: {

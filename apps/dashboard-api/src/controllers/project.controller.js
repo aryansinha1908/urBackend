@@ -34,13 +34,100 @@ const { createUniqueIndexes } = require("@urbackend/common");
 
 const validateUsersSchema = (schema) => {
   if (!Array.isArray(schema)) return false;
-  const hasEmail = schema.find(
-    (f) => f.key === "email" && f.type === "String" && f.required,
+
+  const sanitizedSchema = sanitizeSchemaFields(schema);
+
+  const hasEmail = sanitizedSchema.find(
+    (f) =>
+      normalizeFieldKey(f.key).toLowerCase() === "email" &&
+      normalizeFieldType(f.type) === "string" &&
+      isRequiredField(f.required),
   );
-  const hasPassword = schema.find(
-    (f) => f.key === "password" && f.type === "String" && f.required,
+
+  const hasPassword = sanitizedSchema.find(
+    (f) =>
+      normalizeFieldKey(f.key).toLowerCase() === "password" &&
+      normalizeFieldType(f.type) === "string" &&
+      isRequiredField(f.required),
   );
+
   return !!(hasEmail && hasPassword);
+};
+
+const normalizeFieldKey = (key) =>
+  String(key || "")
+    .replace(/\uFEFF/g, "")
+    .trim();
+
+const normalizeFieldType = (type) =>
+  String(type || "")
+    .trim()
+    .toLowerCase();
+
+const isRequiredField = (required) =>
+  required === true ||
+  required === 1 ||
+  String(required).trim().toLowerCase() === "true" ||
+  String(required).trim() === "1";
+
+const toPlainObject = (value) => {
+  if (!value || typeof value !== "object") return value;
+  if (typeof value.toObject === "function") {
+    return value.toObject({ depopulate: true });
+  }
+  if (value._doc && typeof value._doc === "object") {
+    return { ...value._doc };
+  }
+  return value;
+};
+
+const sanitizeSchemaFields = (schema = []) => {
+  if (!Array.isArray(schema)) return [];
+  return schema
+    .map((rawField) => {
+      const field = toPlainObject(rawField);
+      if (!field || typeof field !== "object") return null;
+
+      const normalizedKey = normalizeFieldKey(field.key);
+      if (!normalizedKey) return null;
+
+      const next = { ...field, key: normalizedKey };
+
+      if (Array.isArray(field.fields)) {
+        next.fields = sanitizeSchemaFields(field.fields);
+      }
+
+      if (field.items && typeof field.items === "object") {
+        next.items = { ...field.items };
+        if (Array.isArray(field.items.fields)) {
+          next.items.fields = sanitizeSchemaFields(field.items.fields);
+        }
+      }
+
+      return next;
+    })
+    .filter(Boolean);
+};
+
+const getDefaultRlsForCollection = (collectionName, schema = []) => {
+  const normalizedName = String(collectionName || "").toLowerCase();
+  const keys = sanitizeSchemaFields(schema).map((f) => f.key);
+
+  let ownerField = "userId";
+  if (normalizedName === "users") {
+    ownerField = "_id";
+  } else if (keys.includes("userId")) {
+    ownerField = "userId";
+  } else if (keys.includes("ownerId")) {
+    ownerField = "ownerId";
+  }
+
+  return {
+    enabled: false,
+    mode: "owner-write-only",
+    ownerField,
+    requireAuthForWrite: true,
+  };
 };
 
 module.exports.createProject = async (req, res) => {
@@ -142,9 +229,14 @@ module.exports.getSingleProject = async (req, res) => {
           return {
             ...col,
             model: col.model.filter((m) => m.key !== "password"),
+            rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
           };
         }
-        return col;
+
+        return {
+          ...col,
+          rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
+        };
       });
     }
 
@@ -421,7 +513,11 @@ module.exports.createCollection = async (req, res) => {
       ? collectionName
       : `${project._id}_${collectionName}`;
 
-    project.collections.push({ name: collectionName, model: schema });
+    project.collections.push({
+      name: collectionName,
+      model: schema,
+      rls: getDefaultRlsForCollection(collectionName, schema),
+    });
     await project.save();
     collectionWasPersisted = true;
 
@@ -701,6 +797,7 @@ module.exports.editRow = async (req, res) => {
       project.databaseUsed = Math.max(0, currentUsed + sizeDiff);
       await project.save();
     }
+
     const responseData = updatedDoc.toObject();
     if (collectionName === "users") {
       delete responseData.password;
@@ -1139,9 +1236,14 @@ module.exports.toggleAuth = async (req, res) => {
           return {
             ...col,
             model: col.model.filter((m) => m.key !== "password"),
+            rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
           };
         }
-        return col;
+
+        return {
+          ...col,
+          rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
+        };
       });
     }
 

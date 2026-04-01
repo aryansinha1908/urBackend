@@ -18,8 +18,8 @@ const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
   body: formData
 });
 
-const { url, path } = await res.json();
-// url: "https://storage.ub.bitbros.in/.../image.jpg"
+const { url, path, provider } = await res.json();
+// url: "https://xyz.supabase.co/storage/v1/object/public/dev-files/project_id/image.jpg"
 // path: "project_id/image.jpg"
 ```
 
@@ -27,8 +27,10 @@ Expected response shape:
 
 ```json
 {
-  "url": "https://storage.ub.bitbros.in/PROJECT_ID/file.png",
-  "path": "PROJECT_ID/file.png"
+  "message": "File uploaded successfully",
+  "url": "https://xyz.supabase.co/storage/v1/object/public/dev-files/PROJECT_ID/file.png",
+  "path": "PROJECT_ID/file.png",
+  "provider": "internal"
 }
 ```
 

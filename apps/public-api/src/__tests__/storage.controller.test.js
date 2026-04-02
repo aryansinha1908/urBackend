@@ -193,6 +193,16 @@ describe('storage.controller', () => {
             expect(res.json).toHaveBeenCalledWith({ error: 'Access denied.' });
         });
 
+        test('returns 403 when trying to delete file using path traversal', async () => {
+            const req = { project: makeProject(), body: { path: 'project_id_1/../other_project/file.txt' } };
+            const res = makeRes();
+
+            await storageController.deleteFile(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(403);
+            expect(res.json).toHaveBeenCalledWith({ error: 'Access denied.' });
+        });
+
         test('returns 200 on successful internal deletion', async () => {
             isProjectStorageExternal.mockReturnValue(false);
             mockStorageFrom.list.mockResolvedValue({ data: [{ metadata: { size: 1024 } }], error: null });
@@ -203,7 +213,7 @@ describe('storage.controller', () => {
 
             await storageController.deleteFile(req, res);
 
-            expect(mockStorageFrom.list).toHaveBeenCalled();
+            expect(mockStorageFrom.list).toHaveBeenCalledWith('project_id_1', { search: 'file.txt' });
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
             expect(Project.updateOne).toHaveBeenCalledWith(
                 { _id: 'project_id_1' },
@@ -290,6 +300,20 @@ describe('storage.controller', () => {
                 deleted: 2,
                 provider: 'internal'
             });
+        });
+
+        test('returns 500 when Supabase remove fails during deleteAllFiles', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            mockStorageFrom.list.mockResolvedValue({ data: [{ name: 'file1.txt' }], error: null });
+            mockStorageFrom.remove.mockResolvedValue({ data: null, error: new Error('Remove failed') });
+
+            const req = { project: makeProject() };
+            const res = makeRes();
+
+            await storageController.deleteAllFiles(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Failed to delete files' }));
         });
 
         test('returns 500 if pagination fetch fails', async () => {

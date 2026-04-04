@@ -39,6 +39,7 @@ urBackend is an **Open-Source BaaS** built to eliminate the complexity of backen
 | **Cloud Storage** | Managed file/image uploads with public CDN links. |
 | **BYO Database** | Connect your own MongoDB Atlas or self-hosted instance. |
 | **Real-time Analytics** | Monitor traffic and resource usage from a premium dashboard. |
+| **Unique Constraints** | Enforce field uniqueness (e.g., username, email) at the database level. |
 | **Secure Architecture** | Dual-key separation (`pk_live` & `sk_live`) for total safety. |
 
 ---

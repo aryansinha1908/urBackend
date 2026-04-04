@@ -142,7 +142,7 @@ module.exports.getSingleDoc = async (req, res) => {
     );
 
     const baseFilter = req.rlsFilter && typeof req.rlsFilter === 'object' ? req.rlsFilter : {};
-    const doc = await Model.findOne({ _id: id, ...baseFilter }).lean();
+    const doc = await Model.findOne({ $and: [{ _id: id }, baseFilter] }).lean();
     if (!doc) return res.status(404).json({ error: "Document not found." });
 
     res.json(doc);
